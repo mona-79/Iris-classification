@@ -1,158 +1,114 @@
-# Iris Dataset Classification
+# Iris Classification Project
 
-This project demonstrates basic data analysis and classification on the Iris dataset using Logistic Regression and Decision Tree classifiers.
+## Overview
+
+This project demonstrates the classification of the Iris dataset using a K-Nearest Neighbors (KNN) classifier. It includes data visualization, hyperparameter tuning, cross-validation, and performance evaluation.
 
 ## Dataset
 
-The Iris dataset is a classic dataset in machine learning, containing information about three different species of Iris flowers: Iris-setosa, Iris-versicolor, and Iris-virginica. The dataset includes 150 samples, with 50 samples for each species. Each sample has four features:
-- Sepal Length (cm)
-- Sepal Width (cm)
-- Petal Length (cm)
-- Petal Width (cm)
+The Iris dataset contains 150 samples of iris flowers, with each sample having four features: sepal length, sepal width, petal length, and petal width. The samples belong to one of three classes: setosa, versicolor, or virginica.
 
-## Prerequisites
+You can find the dataset on the UCI Machine Learning Repository: [Iris Dataset](https://archive.ics.uci.edu/ml/datasets/Iris).
 
-Before you begin, ensure you have met the following requirements:
-- Python 3.x installed
-- Required Python libraries installed: `pandas`, `numpy`, `matplotlib`, `seaborn`, `sklearn`
+## Installation
 
-You can install the required libraries using pip:
+To run the code, you need to have Python installed along with the following libraries:
+
+- numpy
+- matplotlib
+- seaborn
+- scikit-learn
+
+You can install these libraries using pip:
+
 ```bash
-pip install pandas numpy matplotlib seaborn scikit-learn
-```
+pip install numpy matplotlib seaborn scikit-learn
 
-## Usage
+##Code
 
-1. **Load the Dataset**
+# Import necessary libraries
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 
-    ```python
-    import pandas as pd
-    df = pd.read_csv('Iris.csv')
-    ```
+# Load the iris dataset
+iris = load_iris()
+X, y = iris.data, iris.target
 
-2. **Data Preprocessing**
+# Visualize the dataset
+sns.pairplot(sns.load_dataset('iris'), hue='species')
+plt.show()
 
-    - Drop the `Id` column
-    - Display basic information about the dataset
-    - Check for missing values
-    - Plot histograms for each feature
-    - Scatter plots for different feature pairs
-    - Plot correlation heatmap
-    - Label Encoding for the target variable
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    ```python
-    df = df.drop(columns=['Id'])
-    print(df.head())
-    print(df.describe())
-    print(df.info())
-    print(df['Species'].value_counts())
-    print(df.isnull().sum())
+# Standardize the features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-    import matplotlib.pyplot as plt
-    df['SepalLengthCm'].hist()
-    plt.title('Sepal Length')
-    plt.show()
-    df['SepalWidthCm'].hist()
-    plt.title('Sepal Width')
-    plt.show()
-    df['PetalLengthCm'].hist()
-    plt.title('Petal Length')
-    plt.show()
-    df['PetalWidthCm'].hist()
-    plt.title('Petal Width')
-    plt.show()
+# Hyperparameter tuning using GridSearchCV
+param_grid = {'n_neighbors': np.arange(1, 25)}
+knn = KNeighborsClassifier()
+knn_cv = GridSearchCV(knn, param_grid, cv=5)
+knn_cv.fit(X_train, y_train)
 
-    import seaborn as sns
-    colors = ['red', 'orange', 'blue']
-    species = ['Iris-virginica', 'Iris-versicolor', 'Iris-setosa']
+# Best parameters
+print(f'Best parameters: {knn_cv.best_params_}')
 
-    for i in range(3):
-        x = df[df['Species'] == species[i]]
-        plt.scatter(x['SepalLengthCm'], x['SepalWidthCm'], c=colors[i], label=species[i])
-    plt.xlabel('Sepal Length')
-    plt.ylabel('Sepal Width')
-    plt.legend()
-    plt.show()
+# Train the K-Nearest Neighbors classifier with the best parameters
+knn_best = KNeighborsClassifier(n_neighbors=knn_cv.best_params_['n_neighbors'])
+knn_best.fit(X_train, y_train)
 
-    for i in range(3):
-        x = df[df['Species'] == species[i]]
-        plt.scatter(x['PetalLengthCm'], x['PetalWidthCm'], c=colors[i], label=species[i])
-    plt.xlabel('Petal Length')
-    plt.ylabel('Petal Width')
-    plt.legend()
-    plt.show()
+# Make predictions on the test set
+y_pred = knn_best.predict(X_test)
 
-    for i in range(3):
-        x = df[df['Species'] == species[i]]
-        plt.scatter(x['SepalLengthCm'], x['PetalLengthCm'], c=colors[i], label=species[i])
-    plt.xlabel('Sepal Length')
-    plt.ylabel('Petal Length')
-    plt.legend()
-    plt.show()
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy:.2f}')
+print('Classification Report:')
+print(classification_report(y_test, y_pred))
 
-    for i in range(3):
-        x = df[df['Species'] == species[i]]
-        plt.scatter(x['SepalWidthCm'], x['PetalWidthCm'], c=colors[i], label=species[i])
-    plt.xlabel('Sepal Width')
-    plt.ylabel('Petal Width')
-    plt.legend()
-    plt.show()
+# Confusion matrix
+conf_matrix = confusion_matrix(y_test, y_pred)
+sns.heatmap(conf_matrix, annot=True, cmap='Blues', fmt='d', xticklabels=iris.target_names, yticklabels=iris.target_names)
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
 
-    corr = df.corr()
-    fig, ax = plt.subplots(figsize=(5, 4))
-    sns.heatmap(corr, annot=True, ax=ax, cmap='coolwarm')
-    plt.show()
+# Cross-validation
+cv_scores = cross_val_score(knn_best, X, y, cv=5)
+print(f'Cross-validation scores: {cv_scores}')
+print(f'Mean cross-validation score: {cv_scores.mean():.2f}')
 
-    from sklearn.preprocessing import LabelEncoder
-    le = LabelEncoder()
-    df['Species'] = le.fit_transform(df['Species'])
-    print(df.head())
-    ```
+# Predict class for a new sample
+sample = [[5.0, 3.5, 1.6, 0.3]]
+sample_scaled = scaler.transform(sample)
+prediction = knn_best.predict(sample_scaled)
+print(f'Predicted class for the sample: {iris.target_names[prediction][0]}')
 
-3. **Train/Test Split**
+##Usage
+Load the Dataset: The Iris dataset is loaded and visualized to understand feature relationships.
+Split and Standardize: The dataset is split into training and testing sets, and features are standardized.
+Hyperparameter Tuning: The best n_neighbors value is found using GridSearchCV.
+Model Training: A K-Nearest Neighbors classifier is trained with the best hyperparameters.
+Evaluation: Model performance is evaluated using accuracy, classification report, and confusion matrix. Cross-validation scores are also computed.
+Prediction: The classifier predicts the class for a new sample.
 
-    Split the dataset into training and testing sets:
+##Future Work
+For further improvement, consider the following:
 
-    ```python
-    from sklearn.model_selection import train_test_split
-    x = df.drop(columns=['Species'])
-    y = df['Species']
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.30, random_state=42)
-    ```
+Explore other classification algorithms (e.g., SVM, Decision Trees).
+Perform additional hyperparameter tuning.
+Implement more advanced data visualization techniques.
+Enhance model robustness with techniques like feature selection or engineering.
 
-4. **Logistic Regression**
+##License
 
-    Train and evaluate a Logistic Regression model:
+This `README.md` provides detailed information about the project, including installation instructions, code explanation, usage steps, and suggestions for future work. It ensures that anyone reviewing or running the project can understand its components and objectives.
 
-    ```python
-    from sklearn.linear_model import LogisticRegression
-    model = LogisticRegression()
-    model.fit(x_train, y_train)
-
-    accuracy = model.score(x_test, y_test)
-    print('Logistic Regression Accuracy:', accuracy)
-
-    coefficients = model.coef_
-    print('Coefficients:', coefficients)
-    ```
-
-5. **Decision Tree Classifier**
-
-    Train and evaluate a Decision Tree Classifier model:
-
-    ```python
-    from sklearn.tree import DecisionTreeClassifier
-    model = DecisionTreeClassifier()
-    model.fit(x_train, y_train)
-
-    accuracy = model.score(x_test, y_test)
-    print('Decision Tree Accuracy:', accuracy)
-    ```
-
-## Results
-
-After running the code, you should see the accuracy of both Logistic Regression and Decision Tree models printed out, along with the coefficients of the Logistic Regression model.
-
-## License
-
-This project is licensed under the MIT License.
